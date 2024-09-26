@@ -106,3 +106,239 @@ Template voor het bouwen van React Native apps op Expo
    - **Modulaire structuur** voor eenvoudiger onderhoud en uitbreidingen.
    - Ondersteuning voor **dark mode** en toegankelijkheidsopties.
    
+   Hier is een duidelijk overzicht van de structuur en componenten van het template die je nodig hebt om de app op te bouwen. Dit is een stap-voor-stap plan met alle elementen die nodig zijn:
+
+---
+### 1. **Project Structuur**
+Dit is de basisstructuur van je app met alle benodigde mappen en bestanden:
+
+```bash
+expo-go-app/
+│
+├── src/
+│   ├── components/
+│   │   ├── AuthForm.js      # Herbruikbaar inlog-/registratieformulier
+│   │   ├── PaymentButton.js # Betalingsknopcomponent
+│   │   ├── Profile.js       # Gebruikersprofiel component
+│   │   └── OrderHistory.js  # Geschiedenis van betalingen/transactions
+│   │
+│   ├── contexts/
+│   │   ├── AuthContext.js    # Beheer van gebruikersauthenticatie
+│   │   ├── PaymentContext.js # Beheer van betalingen en orderstatus
+│   │   └── GlobalContext.js  # Algemene state management voor de app
+│   │
+│   ├── navigation/
+│   │   └── AppNavigator.js   # Hoofd navigatie voor publieke en beveiligde routes
+│   │
+│   ├── screens/
+│   │   ├── LoginScreen.js         # Login pagina
+│   │   ├── RegisterScreen.js      # Registratie pagina
+│   │   ├── PasswordResetScreen.js # Wachtwoord herstel pagina
+│   │   ├── DashboardScreen.js     # Beveiligde dashboard pagina
+│   │   ├── PaymentScreen.js       # Betaling scherm
+│   │   ├── ProfileScreen.js       # Gebruikersprofiel pagina
+│   │   └── OrderHistoryScreen.js  # Geschiedenis van betalingen
+│   │
+│   ├── services/
+│   │   ├── api.js           # API voor interacties met backend/database
+│   │   ├── auth.js          # Logica voor authenticatie (login, registratie, etc.)
+│   │   ├── payment.js       # Betalingsverwerking (Stripe, Mollie, etc.)
+│   │   └── database.js      # Koppeling met database (Postgres, Firebase, etc.)
+│   │
+│   ├── utils/
+│   │   ├── constants.js     # Globale constanten zoals API URL, JWT-secret
+│   │   └── validators.js    # Validatiefuncties voor formulieren (bijv. wachtwoordvalidatie)
+│   │
+│   └── App.js               # Hoofdbestand van de app waar alles samenkomt
+│
+├── .env                     # Omgevingsvariabelen voor API-sleutels, database credentials, etc.
+├── package.json             # Project afhankelijkheden en scripts
+├── README.md                # Documentatie van het project
+└── app.json                 # Expo config bestand
+```
+
+---
+### 2. **Belangrijke Componenten**
+
+#### **a) AuthForm.js**
+Dit component wordt hergebruikt voor zowel het inlog- als registratieformulier.
+
+```jsx
+import React, { useState, useContext } from 'react';
+import { AuthContext } from '../contexts/AuthContext';
+
+const AuthForm = ({ isLogin }) => {
+    const { login, register } = useContext(AuthContext);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    
+    const handleSubmit = () => {
+        if (isLogin) {
+            login(email, password);
+        } else {
+            register(email, password);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit}>
+            <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+            />
+            <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+            />
+            <button type="submit">{isLogin ? 'Login' : 'Register'}</button>
+        </form>
+    );
+};
+
+export default AuthForm;
+```
+
+#### **b) PaymentButton.js**
+Dit component regelt betalingen via de gekozen provider (Stripe, Mollie, etc.).
+
+```jsx
+import React, { useContext } from 'react';
+import { PaymentContext } from '../contexts/PaymentContext';
+
+const PaymentButton = ({ amount }) => {
+    const { initiatePayment } = useContext(PaymentContext);
+
+    const handlePayment = () => {
+        initiatePayment(amount);
+    };
+
+    return (
+        <button onClick={handlePayment}>
+            Pay ${amount}
+        </button>
+    );
+};
+
+export default PaymentButton;
+```
+
+---
+### 3. **Navigatie (AppNavigator.js)**
+
+Gebruik `React Navigation` om zowel publieke als beveiligde routes te beheren:
+
+```jsx
+import { createStackNavigator } from '@react-navigation/stack';
+import { NavigationContainer } from '@react-navigation/native';
+import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
+import DashboardScreen from '../screens/DashboardScreen';
+import PaymentScreen from '../screens/PaymentScreen';
+
+const Stack = createStackNavigator();
+
+const AppNavigator = () => {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Login">
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="Dashboard" component={DashboardScreen} />
+        <Stack.Screen name="Payment" component={PaymentScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+};
+
+export default AppNavigator;
+```
+
+---
+### 4. **Contexten voor State Management**
+
+#### **a) AuthContext.js**
+Beheer van authenticatiestatus en acties (inloggen, uitloggen, registreren).
+
+```jsx
+import React, { createContext, useState } from 'react';
+import { loginService, registerService } from '../services/auth';
+
+export const AuthContext = createContext();
+
+export const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
+
+    const login = async (email, password) => {
+        const loggedInUser = await loginService(email, password);
+        setUser(loggedInUser);
+    };
+
+    const register = async (email, password) => {
+        const registeredUser = await registerService(email, password);
+        setUser(registeredUser);
+    };
+
+    const logout = () => {
+        setUser(null);
+    };
+
+    return (
+        <AuthContext.Provider value={{ user, login, register, logout }}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+```
+
+#### **b) PaymentContext.js**
+Beheer van betalingen en orderstatus.
+
+```jsx
+import React, { createContext } from 'react';
+import { initiatePaymentService } from '../services/payment';
+
+export const PaymentContext = createContext();
+
+export const PaymentProvider = ({ children }) => {
+    const initiatePayment = (amount) => {
+        initiatePaymentService(amount);
+    };
+
+    return (
+        <PaymentContext.Provider value={{ initiatePayment }}>
+            {children}
+        </PaymentContext.Provider>
+    );
+};
+```
+
+---
+### 5. **API Koppelingen (services/api.js)**
+
+Hier schrijf je de functies voor communicatie met je backend of database.
+
+```jsx
+export const loginService = async (email, password) => {
+    // Communicatie met backend voor login
+};
+
+export const registerService = async (email, password) => {
+    // Communicatie met backend voor registratie
+};
+
+export const initiatePaymentService = async (amount) => {
+    // Betalingsinitiaties met provider
+};
+```
+
+### 6. **Gebruikers- en Betalingsbeheer in de Database**
+
+Zorg voor correcte datamodellen en API-eindpunten voor het beheren van gebruikers en betalingen, en implementeer webhook callbacks om de status van betalingen te verwerken.
+
+---
+
+Met dit overzicht heb je een duidelijke structuur en een concreet plan om de app op te bouwen. Elk onderdeel kan worden aangepast en uitgebreid, zodat de app schaalbaar en flexibel blijft.
