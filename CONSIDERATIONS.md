@@ -214,7 +214,7 @@ Voordat ik daadwerkelijk begin met het bouwen van de Expo Go-app, zijn er een aa
 
 
 # Samenvatting
-Voordat de begint met bouwen, zorg dat de rekening houdt met:
+Voordat je begint met bouwen, zorg dat de rekening houdt met:
 1. **Technologiekeuzes**: Authenticatie, betalingen, database-integratie.
 2. **Externe Diensten**: Beperkingen, webhooks, beveiliging van API-calls.
 3. **Gebruikerservaring**: Responsive design, offline ondersteuning.
